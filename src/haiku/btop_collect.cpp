@@ -241,7 +241,7 @@ namespace Cpu {
 		current_cpu.cpu_percent.at("system").push_back(system_percent);
 
 		for (const auto& field : {"total", "user", "system"}) {
-			while (current_cpu.cpu_percent.at(field).size() > 40)
+			while (std::cmp_greater(current_cpu.cpu_percent.at(field).size(), width * 2))
 				current_cpu.cpu_percent.at(field).pop_front();
 		}
 
@@ -321,7 +321,7 @@ namespace Mem {
 
 				mem.percent.at(name).push_back(percent);
 
-				while (mem.percent.at(name).size() > 40)
+				while (std::cmp_greater(mem.percent.at(name).size(), width * 2))
 					mem.percent.at(name).pop_front();
 			}
 
@@ -439,7 +439,7 @@ namespace Mem {
 
 			mem.percent.at(name).push_back(percent);
 
-			while (mem.percent.at(name).size() > 40)
+			while (std::cmp_greater(mem.percent.at(name).size(), width * 2))
 				mem.percent.at(name).pop_front();
 		}
 
@@ -538,7 +538,7 @@ namespace Net {
 
 					bandwidth.push_back(saved_stat.speed);
 
-					while (bandwidth.size() > 40)
+					while (std::cmp_greater(bandwidth.size(), width * 2))
 						bandwidth.pop_front();
 
 					if (net_auto and selected_iface == iface) {
@@ -561,6 +561,11 @@ namespace Net {
 			IfAddrsPtr if_addrs {};
 
 			if (if_addrs.get_status() == 0) {
+				for (const auto& iface : interfaces) {
+					net[iface].ipv4.clear();
+					net[iface].ipv6.clear();
+				}
+
 				static_assert(INET6_ADDRSTRLEN >= INET_ADDRSTRLEN);
 				char ip[INET6_ADDRSTRLEN];
 
@@ -792,7 +797,7 @@ namespace Proc {
 				0LL,
 				100LL));
 
-		while (detailed.cpu_percent.size() > 40)
+		while (std::cmp_greater(detailed.cpu_percent.size(), width))
 			detailed.cpu_percent.pop_front();
 
 		const auto now = std::time(nullptr);
@@ -836,7 +841,7 @@ namespace Proc {
 			redraw = true;
 		}
 
-		while (detailed.mem_bytes.size() > 40)
+		while (std::cmp_greater(detailed.mem_bytes.size(), width))
 			detailed.mem_bytes.pop_front();
 	}
 	auto collect(bool no_update) -> vector<proc_info>& {
