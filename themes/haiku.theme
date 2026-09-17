@@ -1,0 +1,81 @@
+# btop Haiku theme
+# Color palette inspired by Haiku.
+
+# Main background, empty for terminal default
+theme[main_bg]="#00"
+
+# Main text
+theme[main_fg]="#e6e6e6"
+
+# General accent/title
+theme[title]="#e6e6e6"
+theme[hi_fg]="#00FF5E"
+
+# Selected process
+theme[selected_bg]="#FF8700"
+theme[selected_fg]="#262626"
+
+# Inactive/disabled text
+theme[inactive_fg]="#666666"
+
+# Process details and mini graphs
+theme[proc_misc]="#FF8700"
+
+# Box outlines
+theme[cpu_box]="#00FF5E"
+theme[mem_box]="#FED75E"
+theme[net_box]="#0086FF"
+theme[proc_box]="#FF8700"
+
+# Dividers
+theme[div_line]="#3C3C3C"
+
+# Temperature graph
+theme[temp_start]="#FF8700"
+theme[temp_mid]=""
+theme[temp_end]="#FED75E"
+
+# CPU graph
+theme[cpu_start]="#007A2D"
+theme[cpu_mid]=""
+theme[cpu_end]="#00FF5E"
+
+# Memory/disk free
+theme[free_start]="#007A2D"
+theme[free_mid]=""
+theme[free_end]="#00FF5E"
+
+# Memory/disk cached
+theme[cached_start]="#004F96"
+theme[cached_mid]=""
+theme[cached_end]="#0086FF"
+
+# Memory/disk available
+theme[available_start]="#8A742F"
+theme[available_mid]=""
+theme[available_end]="#FED75E"
+
+# Memory/disk used
+theme[used_start]="#934E00"
+theme[used_mid]=""
+theme[used_end]="#FF8700"
+
+# Network download
+theme[download_start]="#004F96"
+theme[download_mid]=""
+theme[download_end]="#0086FF"
+
+# Network upload
+theme[upload_start]="#007A2D"
+theme[upload_mid]=""
+theme[upload_end]="#00FF5E"
+
+# Process list banners
+theme[proc_pause_bg]="#FED75E"
+theme[proc_follow_bg]="#FF8700"
+theme[proc_banner_bg]="#FF8700"
+theme[proc_banner_fg]="#262626"
+
+# Followed process
+theme[followed_bg]="#FF8700"
+theme[followed_fg]="#262626"
