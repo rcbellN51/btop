@@ -4,8 +4,12 @@
 */
 
 #include <OS.h>
+#include <Directory.h>
+#include <Entry.h>
 #include <NetworkInterface.h>
 #include <NetworkRoster.h>
+#include <Path.h>
+#include <fs_info.h>
 
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -228,19 +232,149 @@ namespace Mem {
 			static_cast<uint64_t>(system.used_pages) *
 			static_cast<uint64_t>(Shared::page_size);
 
-		const auto free = total > used ? total - used : 0;
+		const auto cached =
+			static_cast<uint64_t>(system.cached_pages) *
+			static_cast<uint64_t>(Shared::page_size);
+
+		const auto available = total > used ? total - used : 0;
+		const auto free = available > cached ? available - cached : 0;
 
 		mem.stats.at("used") = used;
-		mem.stats.at("available") = free;
-		mem.stats.at("cached") = 0;
+		mem.stats.at("available") = available;
+		mem.stats.at("cached") = cached;
 		mem.stats.at("free") = free;
 
-		mem.stats.at("swap_total") = 0;
-		mem.stats.at("swap_used") = 0;
-		mem.stats.at("swap_free") = 0;
+		const auto swap_total =
+			static_cast<uint64_t>(system.max_swap_pages) *
+			static_cast<uint64_t>(Shared::page_size);
 
-		has_swap = false;
+		const auto swap_free =
+			static_cast<uint64_t>(system.free_swap_pages) *
+			static_cast<uint64_t>(Shared::page_size);
+
+		const auto swap_used =
+			swap_total > swap_free ? swap_total - swap_free : 0;
+
+		mem.stats.at("swap_total") = swap_total;
+		mem.stats.at("swap_used") = swap_used;
+		mem.stats.at("swap_free") = swap_free;
+
+		if (Config::getB("show_swap") and swap_total > 0) {
+			for (const auto& name : swap_names) {
+				const auto percent = static_cast<long long>(std::llround(
+					static_cast<double>(mem.stats.at(name)) * 100.0 /
+					static_cast<double>(swap_total)));
+
+				mem.percent.at(name).push_back(percent);
+
+				while (mem.percent.at(name).size() > 40)
+					mem.percent.at(name).pop_front();
+			}
+
+			has_swap = true;
+		}
+		else {
+			has_swap = false;
+		}
+
 		disk_ios = 0;
+
+		if (Config::getB("show_disks")) {
+			auto& disks = mem.disks;
+			auto& disks_filter = Config::getS("disks_filter");
+			vector<string> filter;
+			bool filter_exclude = false;
+			vector<string> found;
+
+			if (not disks_filter.empty()) {
+				filter = ssplit(disks_filter);
+				if (filter.at(0).starts_with("exclude=")) {
+					filter_exclude = true;
+					filter.at(0) = filter.at(0).substr(8);
+				}
+			}
+
+			int32 cookie = 0;
+			dev_t dev;
+
+			while ((dev = next_dev(&cookie)) >= 0) {
+				fs_info info {};
+				if (fs_stat_dev(dev, &info) != B_OK)
+					continue;
+
+				if (info.block_size <= 0 or info.total_blocks <= 0)
+					continue;
+
+				node_ref ref {};
+				ref.device = info.dev;
+				ref.node = info.root;
+
+				BDirectory directory(&ref);
+				BEntry entry;
+				BPath path;
+
+				if (directory.InitCheck() != B_OK or
+				    directory.GetEntry(&entry) != B_OK or
+				    entry.GetPath(&path) != B_OK)
+					continue;
+
+				const string mountpoint = path.Path();
+
+				if (not filter.empty()) {
+					const bool match = v_contains(filter, mountpoint);
+					if ((filter_exclude and match) or
+					    (not filter_exclude and not match))
+						continue;
+				}
+
+				found.push_back(mountpoint);
+
+				auto& disk = disks[mountpoint];
+				disk.dev = info.device_name;
+				disk.name = mountpoint == "/" ? "root" : mountpoint;
+				disk.fstype = info.fsh_name;
+
+				disk.total =
+					static_cast<int64_t>(info.total_blocks) *
+					static_cast<int64_t>(info.block_size);
+				disk.free =
+					static_cast<int64_t>(info.free_blocks) *
+					static_cast<int64_t>(info.block_size);
+				disk.used = std::max<int64_t>(0, disk.total - disk.free);
+
+				if (disk.total > 0) {
+					disk.used_percent = static_cast<int>(
+						std::llround(static_cast<double>(disk.used) * 100.0 /
+						             static_cast<double>(disk.total)));
+					disk.free_percent = 100 - disk.used_percent;
+				}
+			}
+
+			if (Config::getB("swap_disk") and has_swap) {
+				found.push_back("swap");
+
+				auto& swap = disks["swap"];
+				swap.name = "swap";
+				swap.total = mem.stats.at("swap_total");
+				swap.used = mem.stats.at("swap_used");
+				swap.free = mem.stats.at("swap_free");
+				swap.used_percent = mem.percent.at("swap_used").back();
+				swap.free_percent = mem.percent.at("swap_free").back();
+			}
+
+			for (auto it = disks.begin(); it != disks.end();) {
+				if (not v_contains(found, it->first))
+					it = disks.erase(it);
+				else
+					++it;
+			}
+
+			mem.disks_order = std::move(found);
+		}
+		else {
+			mem.disks.clear();
+			mem.disks_order.clear();
+		}
 
 		for (const auto& name : mem_names) {
 			const auto percent = total > 0
