@@ -119,10 +119,10 @@ namespace Mv {
 	inline string d(int x) { return Fx::e + to_string(x) + 'B'; }
 
 	//* Save cursor position
-	const string save = "\x1b" "s";
+	const string save = "\x1b" "[s";
 
 	//* Restore saved cursor position
-	const string restore = "\x1b" "u";
+	const string restore = "\x1b" "[u";
 }
 
 //* Collection of escape codes and functions for terminal manipulation
