@@ -119,10 +119,10 @@ namespace Mv {
 	inline string d(int x) { return Fx::e + to_string(x) + 'B'; }
 
 	//* Save cursor position
-	const string save = Fx::e + "s";
+	const string save = "\x1b" "s";
 
 	//* Restore saved cursor position
-	const string restore = Fx::e + "u";
+	const string restore = "\x1b" "u";
 }
 
 //* Collection of escape codes and functions for terminal manipulation
@@ -292,8 +292,14 @@ namespace Tools {
 
 	//* Split <string> at all occurrences of <delim> and return as vector of strings
 	constexpr auto ssplit(std::string_view str, char delim = ' ') {
-		return str | std::views::split(delim) | std::views::filter([](auto&& range) { return !std::ranges::empty(range); }) |
-			   std::ranges::to<std::vector<std::string>>();
+		std::vector<std::string> out;
+
+		for (auto&& range : str | std::views::split(delim)) {
+			if (!std::ranges::empty(range))
+				out.emplace_back(range.begin(), range.end());
+		}
+
+		return out;
 	}
 
 	//* Put current thread to sleep for <ms> milliseconds
