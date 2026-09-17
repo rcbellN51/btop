@@ -70,8 +70,56 @@ namespace Cpu {
 		return mapping;
 	}
 
+	string get_cpuName() {
+		cpuid_info info {};
+
+		if (get_cpuid(&info, 0x80000000, 0) != B_OK or
+		    info.regs.eax < 0x80000004)
+			return "";
+
+		char brand[49] {};
+
+		for (uint32 leaf = 0x80000002; leaf <= 0x80000004; ++leaf) {
+			if (get_cpuid(&info, leaf, 0) != B_OK)
+				return "";
+
+			char* part = brand + (leaf - 0x80000002) * 16;
+			std::memcpy(part, &info.regs.eax, 4);
+			std::memcpy(part + 4, &info.regs.ebx, 4);
+			std::memcpy(part + 8, &info.regs.ecx, 4);
+			std::memcpy(part + 12, &info.regs.edx, 4);
+		}
+
+		return trim_name(string(brand));
+	}
+
+	static string normalize_frequency(double mhz) {
+		string str;
+		if (mhz > 999999) {
+			str = fmt::format("{:.1f}", mhz / 1'000'000);
+			str.resize(3);
+			if (str.back() == '.') str.pop_back();
+			str += " THz";
+		}
+		else if (mhz > 999) {
+			str = fmt::format("{:.1f}", mhz / 1'000);
+			str.resize(3);
+			if (str.back() == '.') str.pop_back();
+			str += " GHz";
+		}
+		else {
+			str = fmt::format("{:.0f} MHz", mhz);
+		}
+		return str;
+	}
+
 	string get_cpuHz() {
-		return "";
+		::cpu_info cpu {};
+
+		if (get_cpu_info(0, 1, &cpu) != B_OK or cpu.current_frequency == 0)
+			return "";
+
+		return normalize_frequency(cpu.current_frequency / 1'000'000.0);
 	}
 
 	auto get_battery() -> tuple<int, float, long, string> {
@@ -82,6 +130,12 @@ namespace Cpu {
 		if (Runner::stopping or
 		    (no_update and not current_cpu.cpu_percent.at("total").empty()))
 			return current_cpu;
+
+		if (Config::getB("show_cpu_freq")) {
+			auto hz = get_cpuHz();
+			if (not hz.empty())
+				cpuHz = hz;
+		}
 
 		system_info system {};
 		if (get_system_info(&system) != B_OK) {
@@ -1280,6 +1334,7 @@ namespace Shared {
 		Cpu::core_old_active.resize(coreCount);
 
 		Cpu::core_mapping = Cpu::get_core_mapping();
+		Cpu::cpuName = Cpu::get_cpuName();
 
 		Cpu::collect();
 		Mem::collect();
