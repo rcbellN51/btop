@@ -213,7 +213,7 @@ void clean_quit(int sig) {
 	Global::quitting = true;
 	Runner::stop();
 	if (Global::_runner_started) {
-	#if defined __APPLE__ || defined __OpenBSD__ || defined __NetBSD__
+	#if defined __APPLE__ || defined __OpenBSD__ || defined __NetBSD__ || defined __sun
 		if (pthread_join(Runner::runner_id, nullptr) != 0) {
 			Logger::warning("Failed to join _runner thread on exit!");
 		}
@@ -253,7 +253,7 @@ void clean_quit(int sig) {
 
 	const auto excode = (sig != -1 ? sig : 0);
 
-#if defined __APPLE__ || defined __OpenBSD__ || defined __NetBSD__
+#if defined __APPLE__ || defined __OpenBSD__ || defined __NetBSD__ || defined __sun
 	_Exit(excode);
 #else
 	quick_exit(excode);
