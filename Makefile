@@ -191,6 +191,12 @@ else ifeq ($(PLATFORM_LC),netbsd)
 	override ADDFLAGS += -lkvm -lprop
 	export MAKE = gmake
 	SU_GROUP := wheel
+else ifeq ($(PLATFORM_LC),sunos)
+        PLATFORM_DIR := illumos
+        THREADS := $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+        SU_GROUP := root
+        override ADDFLAGS += -lkstat -lsocket -lnsl
+        export MAKE = gmake
 else
 $(error $(call red_i,ERROR: $(WHITE)Unsupported platform ($(PLATFORM))))
 endif
